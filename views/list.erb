@@ -1,0 +1,18 @@
+<ul id='lists'>
+  <% session[:lists].each.with_index do |list, id| %>
+  <li>
+    <a href='/lists/<%= id %>'><%= list[:name] %></a>
+    <% if @list_id == id %>
+      <ul id='todos'>
+        <% if list[:todos].empty? %>
+          <li>This list is empty</li>
+        <% else %>
+          <% list[:todos].each do |item| %>
+            <li><%= item %></li>
+          <% end %>
+        <% end %>
+      </ul>
+    <% end %>
+  </li>
+  <% end %>
+</ul>

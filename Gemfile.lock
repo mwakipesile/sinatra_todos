@@ -24,11 +24,15 @@ GEM
 
 PLATFORMS
   ruby
+  x86-mingw32
 
 DEPENDENCIES
   erubis
   sinatra (~> 1.4.7)
   sinatra-contrib
 
+RUBY VERSION
+   ruby 2.2.5p319
+
 BUNDLED WITH
-   1.12.5
+   1.13.1
