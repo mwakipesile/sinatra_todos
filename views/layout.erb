@@ -12,6 +12,15 @@
       <h1><a href='/'>Todo Tracker</a></h1>
     </header>
     <main>
+      <% @flash_message_keys.each do |message_key| %>
+        <% if session[message_key] %>
+          <div class='flash <%= message_key.to_s %>'>
+            <%= session.delete(message_key) %>
+          </div>
+          <% break %>
+        <% end %>
+      <% end %>
+
       <%= yield %>
     </main>
   </body>
