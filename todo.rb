@@ -7,7 +7,7 @@ configure do
   set :session_secret, 'password1'
 end
 
-before do 
+before do
   session[:lists] ||= []
   @lists = session[:lists]
   @flash_message_keys = [:error, :success]
@@ -15,9 +15,9 @@ end
 
 helpers do
   def invalid_name_message(name)
-    if !(1..100).cover?(name.strip.size) 
+    if !(1..100).cover?(name.size)
       return 'Name must be between 1 and 100 characters'
-    elsif @lists.detect { |list| list[:name].downcase == name.downcase }
+    elsif @lists.any? { |list| list[:name].casecmp(name).zero? }
       return 'Name taken'
     end
   end
@@ -39,7 +39,7 @@ end
 
 # Create a new list
 post '/lists' do
-  list_name = params['list_name']
+  list_name = params['list_name'].strip
   error = invalid_name_message(list_name)
 
   if error
