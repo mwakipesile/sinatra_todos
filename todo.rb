@@ -62,11 +62,11 @@ end
 post '/lists/:id' do |id|
   @list = @lists[id.to_i]
 
-  if params['todo']
-    @list[:todos] << params['todo'].strip
-    session[:success] = "#{params['todo']} has been added to the list!"
+  if params[:todo]
+    @list[:todos] << params[:todo].strip
+    session[:success] = "#{params[:todo]} has been added to the list!"
   else
-    @list[:name] = params['list_name'].strip
+    @list[:name] = params[:list_name].strip
     session[:success] = "List name has been updated!"
   end
 
