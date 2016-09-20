@@ -78,3 +78,11 @@ get '/lists/:id/edit' do |id|
   @list = @lists[@list_id]
   erb :edit_list, layout: :layout
 end
+
+post '/lists/:id/delete' do |id|
+  list_id = id.to_i
+  list_name = @lists[list_id][:name]
+  @lists.delete_at(list_id)
+  session[:success] = "#{list_name} list has been deleted!"
+  redirect('/lists')
+end

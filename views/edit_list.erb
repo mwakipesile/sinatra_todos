@@ -1,18 +1,31 @@
+<section id='todos'>
+  <header>
+    <h2 class='edit'>Editing '<%= @list[:name] %>'</h2>
+    <ul>
+      <li>
+        <form action='/lists/<%= @list_id %>/delete' method='post'>
+          <button type='submit' class='delete'>Delete List</button>
+        </form>
+      </li>
+    <ul>
+  </header>
+</section>
+
 <form action='/lists/<%= @list_id %>' method='post'>
   <dl>
     <dt>
-      <label for='list_name'>Change the name for your list:</label>
+      <label for='list_name'>Update the name for your list:</label>
     </dt>
     <dd>
-      <input name='list_name' type='test' value='<%= params[:list_name] || @list[:name] %>'>
+      <input name='list_name' type='text' value='<%= params[:list_name] || @list[:name] %>'>
     </dd>
   </dl>
   <fieldset class='actions'>
-    <input type='submit' value='Save'>
+    <input type='submit' value='Update'>
     <a href='/lists/<%= @list_id %>'>Cancel</a>
   </fieldset>
 </form>
 
-  <% content_for :header_link do %>
-    <a href='/lists'>All Lists</a>
-  <% end %>
+<% content_for :header_link do %>
+  <a href='/lists'>All Lists</a>
+<% end %>
