@@ -1,18 +1,37 @@
-<ul id='lists'>
-  <% session[:lists].each.with_index do |list, id| %>
-  <li>
-    <a href='/lists/<%= id %>'><%= list[:name] %></a>
-    <% if @list_id == id %>
-      <ul id='todos'>
-        <% if list[:todos].empty? %>
-          <li>This list is empty</li>
-        <% else %>
-          <% list[:todos].each do |item| %>
-            <li><%= item %></li>
-          <% end %>
-        <% end %>
-      </ul>
+<section id='todos'>
+  <header>
+    <h2><%= @list[:name] %></h2>
+    <ul>
+      <li class='edit'><a href='<%= @list_id %>/edit'>Edit</a></li>
+    </ul>
+  </header>
+
+  <ul>
+    <% if @list[:todos].empty? %>
+      <p>This list is empty</p>
+    <% else %>
+      <% @list[:todos].each do |item| %>
+        <li><%= item %></li>
+      <% end %>
     <% end %>
-  </li>
+  </ul>
+
+  <form action='' method='post'>
+    <dl>
+      <dt>
+        <label for='todo'>Add item to the list:</label>
+      </dt>
+      <dd>
+        <input name='todo' placeholder='Todo item' type='test' value=''>
+      </dd>
+    </dl>
+    <fieldset class='actions'>
+      <input type='submit' value='Save'>
+      <a href='/'>Cancel</a>
+    </fieldset>
+  </form>
+</section>
+
+  <% content_for :header_link do %>
+    <a href='/lists'>All Lists</a>
   <% end %>
-</ul>

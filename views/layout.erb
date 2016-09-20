@@ -10,6 +10,7 @@
   <body>
     <header>
       <h1><a href='/'>Todo Tracker</a></h1>
+      <div class='actions'><%= yield_content :header_link %></div>
     </header>
     <main>
       <% @flash_message_keys.each do |message_key| %>

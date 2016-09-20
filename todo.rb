@@ -1,5 +1,6 @@
 require 'sinatra'
 require 'sinatra/reloader' if development?
+require 'sinatra/content_for'
 require 'tilt/erubis'
 
 configure do
@@ -54,5 +55,26 @@ end
 
 get '/lists/:id' do |id|
   @list_id = id.to_i
+  @list = @lists[@list_id]
   erb :list, layout: :layout
+end
+
+post '/lists/:id' do |id|
+  @list = @lists[id.to_i]
+
+  if params['todo']
+    @list[:todos] << params['todo'].strip
+    session[:success] = "#{params['todo']} has been added to the list!"
+  else
+    @list[:name] = params['list_name'].strip
+    session[:success] = "List name has been updated!"
+  end
+
+  redirect("/lists/#{id}")
+end
+
+get '/lists/:id/edit' do |id|
+  @list_id = id.to_i
+  @list = @lists[@list_id]
+  erb :edit_list, layout: :layout
 end
