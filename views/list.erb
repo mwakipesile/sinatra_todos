@@ -6,32 +6,32 @@
     </ul>
   </header>
 
-  <ul>
-    <% if @list[:todos].empty? %>
-      <p>This list is empty</p>
-    <% else %>
-      <% @list[:todos].each do |item| %>
-        <li><%= item %></li>
+  <% if @list[:todos].empty? %>
+    <p>This list is empty</p>   
+  <% else %>
+    <ul>
+      <% @list[:todos].each_with_index do |item, idx| %>
+        <li><%= item[:name] %></li>
       <% end %>
-    <% end %>
-  </ul>
-
-  <form action='' method='post'>
-    <dl>
-      <dt>
-        <label for='todo'>Add item to the list:</label>
-      </dt>
-      <dd>
-        <input name='todo' placeholder='Todo item' type='text' value=''>
-      </dd>
-    </dl>
-    <fieldset class='actions'>
-      <input type='submit' value='Save'>
-      <a href='/'>Cancel</a>
-    </fieldset>
-  </form>
+    </ul>
+  <% end %>
 </section>
 
-  <% content_for :header_link do %>
-    <a href='/lists'>All Lists</a>
-  <% end %>
+<form action='/lists/<%= @list_id %>/add' method='post'>
+  <dl>
+    <dt>
+      <label for='todo'>Add item to the list:</label>
+    </dt>
+    <dd>
+      <input name='todo' placeholder='Todo item' type='text' value=''>
+    </dd>
+  </dl>
+  <fieldset class='actions'>
+    <input type='submit' value='Add'>
+    <a href='/'>Cancel</a>
+  </fieldset>
+</form>
+
+<% content_for :header_link do %>
+  <a href='/lists'>All Lists</a>
+<% end %>

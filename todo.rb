@@ -15,11 +15,17 @@ before do
 end
 
 helpers do
-  def invalid_name_message(name)
+  def invalid_list_name_message(name)
     if !(1..100).cover?(name.size)
       return 'Name must be between 1 and 100 characters'
     elsif @lists.any? { |list| list[:name].casecmp(name).zero? }
       return 'Name taken'
+    end
+  end
+
+  def invalid_todo_name(name)
+    if !(1..100).cover?(name.size)
+      return 'Todo name must be between 1 and 100 characters'
     end
   end
 end
@@ -41,7 +47,7 @@ end
 # Create a new list
 post '/lists' do
   list_name = params['list_name'].strip
-  error = invalid_name_message(list_name)
+  error = invalid_list_name_message(list_name)
 
   if error
     session[:error] = error
@@ -60,17 +66,22 @@ get '/lists/:id' do |id|
 end
 
 post '/lists/:id' do |id|
-  @list = @lists[id.to_i]
+  @list_id = id.to_i
+  @list = @lists[@list_id]
 
-  if params[:todo]
-    @list[:todos] << params[:todo].strip
-    session[:success] = "#{params[:todo]} has been added to the list!"
+  @updated_name = params[:list_name].strip
+  error = invalid_list_name_message(@updated_name)
+
+  if error
+    session[:error] = error
+    @updated_name.sub!(@updated_name[100..-1], '...') if @updated_name.size > 0
+    erb :edit_list, layout: :layout
   else
-    @list[:name] = params[:list_name].strip
+    @list[:name] = @updated_name
     session[:success] = "List name has been updated!"
-  end
 
-  redirect("/lists/#{id}")
+    redirect("/lists/#{id}")
+  end
 end
 
 get '/lists/:id/edit' do |id|
@@ -82,7 +93,24 @@ end
 post '/lists/:id/delete' do |id|
   list_id = id.to_i
   list_name = @lists[list_id][:name]
+
   @lists.delete_at(list_id)
   session[:success] = "#{list_name} list has been deleted!"
+
   redirect('/lists')
+end
+
+post '/lists/:id/add' do |id|
+  todo = params[:todo].strip
+  error = invalid_todo_name(todo)
+  @list = @lists[id.to_i]
+
+  if error
+    session[:error] = error
+  else
+    @list[:todos] << {name: todo, completed: false }
+    session[:success] = "#{params[:todo]} has been added to the list!"
+  end
+
+  redirect("/lists/#{id}")
 end
