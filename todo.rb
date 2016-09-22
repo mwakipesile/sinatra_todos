@@ -1,3 +1,4 @@
+require 'pry'
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
@@ -100,7 +101,7 @@ post '/lists/:id/delete' do |id|
   redirect('/lists')
 end
 
-post '/lists/:id/add' do |id|
+post '/lists/:id/todos' do |id|
   todo = params[:todo].strip
   error = invalid_todo_name(todo)
   @list = @lists[id.to_i]
@@ -112,5 +113,17 @@ post '/lists/:id/add' do |id|
     session[:success] = "#{params[:todo]} has been added to the list!"
   end
 
+  redirect("/lists/#{id}")
+end
+
+post '/lists/:id/todos/:todo_id' do |id, todo_id|
+  is_completed = params[:completed] == 'true'
+  @list_id = id.to_i
+  @todo_id = todo_id.to_i
+
+  @list = @lists[@list_id]
+  @list[:todos][@todo_id][:completed] = is_completed
+
+  session[:success] = "#{@list[:name]} list has been updated"
   redirect("/lists/#{id}")
 end
