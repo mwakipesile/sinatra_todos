@@ -128,6 +128,17 @@ post '/lists/:id/todos/:todo_id' do |id, todo_id|
   redirect("/lists/#{id}")
 end
 
+post '/lists/:id/todos/:todo_id/delete' do |id, todo_id|
+  @list_id = id.to_i
+  @todo_id = todo_id.to_i
+
+  @list = @lists[@list_id]
+  todo = @list[:todos].delete_at(@todo_id)
+
+  session[:success] = "#{todo[:name]} have been deleted from this list"
+  redirect("/lists/#{id}")
+end
+
 post '/lists/:id/completed' do |id|
   @list_id = id.to_i
   @list = @lists[@list_id]
