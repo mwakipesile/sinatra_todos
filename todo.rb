@@ -127,3 +127,14 @@ post '/lists/:id/todos/:todo_id' do |id, todo_id|
   session[:success] = "#{@list[:name]} list has been updated"
   redirect("/lists/#{id}")
 end
+
+post '/lists/:id/completed' do |id|
+  @list_id = id.to_i
+  @list = @lists[@list_id]
+
+  complete_all = @list[:todos].any? { |todo| !todo[:completed] }
+  @list[:todos].each { |todo| todo[:completed] = complete_all }
+
+  session[:success] = "#{@list[:name]} list has been updated"
+  redirect("/lists/#{id}")
+end
