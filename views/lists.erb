@@ -1,13 +1,16 @@
 <ul id='lists'>
-  <% @lists.each.with_index do |list, id| %>
-  <li>
+  <% sort(@lists).each.with_index do |list, id| %>
+  <li class='<%= list_class(list) %>'>
     <a href='/lists/<%= id %>'>
-      <%= list[:name] %><p><%= list[:todos].size %></p>
+      <%= list[:name] %>
+      <p>
+        <%= remaining_todos_count(list) %>/<%= todos_count(list) %>
+      </p>
     </a>
   </li>
   <% end %>
 </ul>
 
 <% content_for :header_link do %>
-  <a href='/lists/new'>New List</a>
+  <a class='add' href='/lists/new'>New List</a>
 <% end %>

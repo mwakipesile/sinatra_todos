@@ -29,6 +29,34 @@ helpers do
       return 'Todo name must be between 1 and 100 characters'
     end
   end
+
+  def list_completed?(list)
+    list[:todos].all? { |todo| todo[:completed] }
+  end
+
+  def list_class(list)
+    return 'new' if list[:todos].size.zero?
+    list_completed?(list) ? 'complete' : '' 
+  end
+
+  def todos_count(list)
+    list[:todos].size
+  end
+
+  def remaining_todos_count(list)
+    list[:todos].count { |todo| !todo[:completed] } 
+  end
+
+  def sort(lists)
+    lists.sort_by! do |list|
+      list[:todos].size.zero? || !list_completed?(list) ? 0 : 1
+    end
+  end
+
+  def sort_todos(list)
+    list[:todos].sort_by! { |todo| todo[:completed] ? 1 : 0 }
+    list
+  end
 end
 
 get '/' do
