@@ -1,4 +1,3 @@
-require 'pry'
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
@@ -145,7 +144,7 @@ end
 
 get '/lists/:id/edit' do |id|
   validate_id(id)
-  
+
   @list_id = id.to_i
   @list = @lists[@list_id]
   erb :edit_list, layout: :layout
