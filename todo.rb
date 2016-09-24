@@ -47,15 +47,29 @@ helpers do
     list[:todos].count { |todo| !todo[:completed] } 
   end
 
+  # Sort lists: uses implicitly passed in block & partition method
   def sort(lists)
-    lists.sort_by! do |list|
-      list[:todos].size.zero? || !list_completed?(list) ? 0 : 1
-    end
+    complete, incomplete = lists.partition { |list| list_completed?(list)}
+    
+    incomplete.each { |list| yield list, lists.index(list) }
+    complete.each { |list| yield list, lists.index(list) }
   end
 
-  def sort_todos(list)
-    list[:todos].sort_by! { |todo| todo[:completed] ? 1 : 0 }
-    list
+  # Sort todos: uses explicitly passed in block
+  def sort_todos(list, &block)
+    complete_todos = {}
+    incomplete_todos = {}
+
+    list[:todos].each_with_index do |todo, id|
+      if todo[:completed]
+        complete_todos[todo] = id
+      else
+        incomplete_todos[todo] = id
+      end
+    end
+
+    incomplete_todos.each(&block)
+    complete_todos.each(&block)
   end
 end
 

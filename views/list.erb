@@ -16,7 +16,7 @@
     <p>This list is empty</p>   
   <% else %>
     <ul>
-      <% sort_todos(@list)[:todos].each_with_index do |todo, idx| %>
+      <% sort_todos(@list) do |todo, idx| %>
         <li<%= ' class=\'complete\'' if todo[:completed] %>>
           <form action='/lists/<%= @list_id %>/todos/<%= idx %>' method='post' class='check'>
             <input type='hidden' name='completed' value='<%= !todo[:completed] %>' />

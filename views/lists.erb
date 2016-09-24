@@ -1,5 +1,5 @@
 <ul id='lists'>
-  <% sort(@lists).each.with_index do |list, id| %>
+  <% sort(@lists) do |list, id| %>
   <li class='<%= list_class(list) %>'>
     <a href='/lists/<%= id %>'>
       <%= list[:name] %>
