@@ -16,6 +16,20 @@ before do
 end
 
 helpers do
+  def valid_id?(id)
+    int_id = id.to_i
+
+    return false unless int_id.to_s == id
+    (0...@lists.size).cover?(int_id)
+  end
+
+  def validate_id(id)
+    unless valid_id?(id)
+      session[:error] = '404. List with that ID doesn\'t exits.'
+      redirect('/lists')
+    end
+  end
+
   def invalid_list_name_message(name)
     if !(1..100).cover?(name.size)
       return 'Name must be between 1 and 100 characters'
@@ -103,6 +117,8 @@ post '/lists' do
 end
 
 get '/lists/:id' do |id|
+  validate_id(id)
+
   @list_id = id.to_i
   @list = @lists[@list_id]
   erb :list, layout: :layout
@@ -128,6 +144,8 @@ post '/lists/:id' do |id|
 end
 
 get '/lists/:id/edit' do |id|
+  validate_id(id)
+  
   @list_id = id.to_i
   @list = @lists[@list_id]
   erb :edit_list, layout: :layout
