@@ -6,6 +6,7 @@ require 'tilt/erubis'
 configure do
   enable :sessions
   set :session_secret, 'password1'
+  set :erb, :escape_html => true
 end
 
 before do
@@ -15,19 +16,19 @@ before do
 end
 
 helpers do
+  def load_list(id)
+    list = @lists[id.to_i]
+    return list if valid_id?(id) && list
+
+    session[:error] = '404. List with that ID doesn\'t exits.'
+    redirect('/lists')
+  end
+
   def valid_id?(id)
-    int_id = id.to_i
-
-    return false unless int_id.to_s == id
-    (0...@lists.size).cover?(int_id)
+    return true if id.is_a?(Integer)
+    id.to_i.to_s == id
   end
 
-  def validate_id(id)
-    unless valid_id?(id)
-      session[:error] = '404. List with that ID doesn\'t exits.'
-      redirect('/lists')
-    end
-  end
 
   def invalid_list_name_message(name)
     if !(1..100).cover?(name.size)
@@ -50,6 +51,10 @@ helpers do
   def list_class(list)
     return 'new' if list[:todos].size.zero?
     list_completed?(list) ? 'complete' : '' 
+  end
+
+  def todo_class(todo)
+    todo[:completed] ? 'complete' : ''
   end
 
   def todos_count(list)
@@ -116,16 +121,15 @@ post '/lists' do
 end
 
 get '/lists/:id' do |id|
-  validate_id(id)
 
   @list_id = id.to_i
-  @list = @lists[@list_id]
+  @list = load_list(id)
   erb :list, layout: :layout
 end
 
 post '/lists/:id' do |id|
   @list_id = id.to_i
-  @list = @lists[@list_id]
+  @list = load_list(id)
 
   @updated_name = params[:list_name].strip
   error = invalid_list_name_message(@updated_name)
@@ -143,18 +147,15 @@ post '/lists/:id' do |id|
 end
 
 get '/lists/:id/edit' do |id|
-  validate_id(id)
-
   @list_id = id.to_i
-  @list = @lists[@list_id]
+  @list = load_list(id)
   erb :edit_list, layout: :layout
 end
 
 post '/lists/:id/delete' do |id|
-  list_id = id.to_i
-  list_name = @lists[list_id][:name]
+  list_name = load_list(id)[:name]
 
-  @lists.delete_at(list_id)
+  @lists.delete_at(id.to_i)
   session[:success] = "#{list_name} list has been deleted!"
 
   redirect('/lists')
@@ -180,7 +181,7 @@ post '/lists/:id/todos/:todo_id' do |id, todo_id|
   @list_id = id.to_i
   @todo_id = todo_id.to_i
 
-  @list = @lists[@list_id]
+  @list = load_list(id)
   @list[:todos][@todo_id][:completed] = is_completed
 
   session[:success] = "#{@list[:name]} list has been updated"
@@ -191,7 +192,7 @@ post '/lists/:id/todos/:todo_id/delete' do |id, todo_id|
   @list_id = id.to_i
   @todo_id = todo_id.to_i
 
-  @list = @lists[@list_id]
+  @list = load_list(id)
   todo = @list[:todos].delete_at(@todo_id)
 
   session[:success] = "#{todo[:name]} have been deleted from this list"
@@ -200,7 +201,7 @@ end
 
 post '/lists/:id/completed' do |id|
   @list_id = id.to_i
-  @list = @lists[@list_id]
+  @list = load_list(id)
 
   complete_all = @list[:todos].any? { |todo| !todo[:completed] }
   @list[:todos].each { |todo| todo[:completed] = complete_all }
