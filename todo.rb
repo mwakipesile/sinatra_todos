@@ -156,9 +156,13 @@ post '/lists/:id/delete' do |id|
   list_name = load_list(id)[:name]
 
   @lists.delete_at(id.to_i)
-  session[:success] = "#{list_name} list has been deleted!"
-
-  redirect('/lists')
+  
+  if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
+    "/lists"
+  else
+    session[:success] = "#{list_name} list has been deleted!"
+    redirect "/lists"
+  end
 end
 
 post '/lists/:id/todos' do |id|
@@ -195,8 +199,12 @@ post '/lists/:id/todos/:todo_id/delete' do |id, todo_id|
   @list = load_list(id)
   todo = @list[:todos].delete_at(@todo_id)
 
-  session[:success] = "#{todo[:name]} have been deleted from this list"
-  redirect("/lists/#{id}")
+  if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
+    status 204
+  else
+    session[:success] = "#{todo[:name]} has been deleted from this list"
+    redirect "/lists/#{@list_id}"
+  end
 end
 
 post '/lists/:id/completed' do |id|
