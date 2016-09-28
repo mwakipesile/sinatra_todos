@@ -1,3 +1,4 @@
+require 'pry'
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
@@ -10,12 +11,17 @@ configure do
 end
 
 before do
-  session[:lists] ||= []
+  session[:lists] ||= {}
   @lists = session[:lists]
   @flash_message_keys = [:error, :success]
 end
 
 helpers do
+  def next_id(list)
+    max_id = list.keys.max || 0
+    max_id + 1
+  end
+
   def load_list(id)
     list = @lists[id.to_i]
     return list if valid_id?(id) && list
@@ -33,7 +39,7 @@ helpers do
   def invalid_list_name_message(name)
     if !(1..100).cover?(name.size)
       return 'Name must be between 1 and 100 characters'
-    elsif @lists.any? { |list| list[:name].casecmp(name).zero? }
+    elsif @lists.values.any? { |list| list[:name].casecmp(name).zero? }
       return 'Name taken'
     end
   end
@@ -44,13 +50,14 @@ helpers do
     end
   end
 
-  def list_completed?(list)
-    list[:todos].all? { |todo| todo[:completed] }
+  def list_completed?(todos) 
+    !todos.empty? && todos.values.all? { |todo| todo[:completed] }
   end
 
   def list_class(list)
-    return 'new' if list[:todos].size.zero?
-    list_completed?(list) ? 'complete' : '' 
+    todos = list[:todos]
+    return 'new' if todos.size.zero?
+    list_completed?(todos) ? 'complete' : '' 
   end
 
   def todo_class(todo)
@@ -62,32 +69,31 @@ helpers do
   end
 
   def remaining_todos_count(list)
-    list[:todos].count { |todo| !todo[:completed] } 
+    list[:todos].values.count { |todo| !todo[:completed] } 
   end
 
   # Sort lists: uses implicitly passed in block & partition method
   def sort(lists)
-    complete, incomplete = lists.partition { |list| list_completed?(list)}
-    
-    incomplete.each { |list| yield list, lists.index(list) }
-    complete.each { |list| yield list, lists.index(list) }
+    completed, incomplete = lists.keys.partition { |id| list_completed?(lists[id][:todos])}
+    incomplete.each { |id| yield id, lists[id] }
+    completed.each { |id| yield id, lists[id] }
   end
 
   # Sort todos: uses explicitly passed in block
-  def sort_todos(list, &block)
-    complete_todos = {}
+  def sort_todos(todos, &block)
+    completed_todos = {}
     incomplete_todos = {}
 
-    list[:todos].each_with_index do |todo, id|
+    todos.each do |id, todo|
       if todo[:completed]
-        complete_todos[todo] = id
+        completed_todos[id] = todo
       else
-        incomplete_todos[todo] = id
+        incomplete_todos [id] = todo
       end
     end
 
     incomplete_todos.each(&block)
-    complete_todos.each(&block)
+    completed_todos.each(&block)
   end
 end
 
@@ -114,7 +120,8 @@ post '/lists' do
     session[:error] = error
     erb :new_list, layout: :layout
   else
-    session[:lists] << { name: list_name, todos: [] }
+    list_id = next_id(@lists)
+    session[:lists][list_id] = { name: list_name, todos: {} }
     session[:success] = "#{list_name} list created!"
     redirect('/lists')
   end
@@ -155,7 +162,7 @@ end
 post '/lists/:id/delete' do |id|
   list_name = load_list(id)[:name]
 
-  @lists.delete_at(id.to_i)
+  @lists.delete(id.to_i)
   
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     "/lists"
@@ -169,12 +176,14 @@ post '/lists/:id/todos' do |id|
   todo = params[:todo].strip
   error = invalid_todo_name(todo)
   @list = @lists[id.to_i]
+  todos = @list[:todos]
 
   if error
     session[:error] = error
   else
-    @list[:todos] << {name: todo, completed: false }
-    session[:success] = "#{params[:todo]} has been added to the list!"
+    todo_id = next_id(todos)
+    todos[todo_id] = { name: todo, completed: false }
+    session[:success] = "#{todo} has been added to the list!"
   end
 
   redirect("/lists/#{id}")
@@ -197,7 +206,7 @@ post '/lists/:id/todos/:todo_id/delete' do |id, todo_id|
   @todo_id = todo_id.to_i
 
   @list = load_list(id)
-  todo = @list[:todos].delete_at(@todo_id)
+  todo = @list[:todos].delete(@todo_id)
 
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     status 204
@@ -210,9 +219,11 @@ end
 post '/lists/:id/completed' do |id|
   @list_id = id.to_i
   @list = load_list(id)
+  # binding.pry
+  todos = @list[:todos].values
 
-  complete_all = @list[:todos].any? { |todo| !todo[:completed] }
-  @list[:todos].each { |todo| todo[:completed] = complete_all }
+  complete_all = todos.any? { |todo| !todo[:completed] }
+  todos.each { |todo| todo[:completed] = complete_all }
 
   session[:success] = "#{@list[:name]} list has been updated"
   redirect("/lists/#{id}")
