@@ -3,7 +3,7 @@ require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
 require 'tilt/erubis'
-require_relative 'models/session_persistence'
+require_relative 'models/database_persistence'
 
 configure do
   enable :sessions
@@ -12,7 +12,7 @@ configure do
 end
 
 before do
-  @storage = SessionPersistence.new(session)
+  @storage = DatabasePersistence.new(logger)
   @flash_message_keys = [:error, :success]
 end
 
@@ -134,6 +134,11 @@ get '/lists/:id' do
   erb :list, layout: :layout
 end
 
+get '/lists/:id/edit' do
+  @list_name = @storage.list_name(@list_id)
+  erb :edit_list, layout: :layout
+end
+
 post '/lists/:id/update' do
   @updated_name = params[:updated_name].strip
   error = invalid_list_name_message(@updated_name)
@@ -148,11 +153,6 @@ post '/lists/:id/update' do
   @storage.update_list_name(@list_id, @updated_name)
   session[:success] = "List name has been updated!"
   redirect("/lists/#{@list_id}")
-end
-
-get '/lists/:id/edit' do
-  @list_name = @storage.list_name(@list_id)
-  erb :edit_list, layout: :layout
 end
 
 post '/lists/:id/delete' do
@@ -200,7 +200,7 @@ post '/lists/:id/todos/:todo_id/delete' do
 end
 
 post '/lists/:id/completed' do
-  @storage.mark_list_complete(@list_id)
+  @storage.mark_all_todos_complete(@list_id)
 
   session[:success] = "#{params[:list_name]} list has been updated"
   redirect("/lists/#{@list_id}")
