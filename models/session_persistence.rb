@@ -3,7 +3,7 @@ class SessionPersistence
 
   def initialize(session)
     @session = session
-    @lists = @session[:lists] ||= []
+    @lists = @session[:lists] ||= {}
   end
 
   def fetch_list(id)
