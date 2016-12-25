@@ -1,7 +1,9 @@
+require 'pry'
 require 'sinatra'
 require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
 require 'tilt/erubis'
+require_relative 'models/session_persistence'
 
 configure do
   enable :sessions
@@ -10,19 +12,17 @@ configure do
 end
 
 before do
-  session[:lists] ||= {}
-  @lists = session[:lists]
+  @storage = SessionPersistence.new(session)
   @flash_message_keys = [:error, :success]
 end
 
-helpers do
-  def next_id(list)
-    max_id = list.keys.max || 0
-    max_id + 1
-  end
+before(%r{/lists\/(\d+)}) { |id| @list_id = id.to_i }
 
+before(%r{/lists\/\d+\/todos\/(\d+)}) { |id| @todo_id = id.to_i }
+
+helpers do
   def load_list(id)
-    list = @lists[id.to_i]
+    list = @storage.fetch_list(id.to_i)
     return list if valid_id?(id) && list
 
     session[:error] = '404. List with that ID doesn\'t exits.'
@@ -38,9 +38,14 @@ helpers do
   def invalid_list_name_message(name)
     if !(1..100).cover?(name.size)
       return 'Name must be between 1 and 100 characters'
-    elsif @lists.values.any? { |list| list[:name].casecmp(name).zero? }
+    #elsif @lists.values.any? { |list| list[:name].casecmp(name).zero? }
+    elsif @storage.list_exists?(name)
       return 'Name taken'
     end
+  end
+
+  def slice_string!(str, limit = 100)
+    str.sub!(str[limit..-1], '...')
   end
 
   def invalid_todo_name(name)
@@ -96,134 +101,107 @@ helpers do
   end
 end
 
-get '/' do
-  redirect('/lists')
-end
+get('/') { redirect('/lists') }
 
 # View a list of all lists
 get '/lists' do
+  @lists = @storage.all_lists
   erb :lists, layout: :layout
 end
 
 # Render the new list form
-get '/lists/new' do
-  erb :new_list, layout: :layout
-end
+get('/lists/create') { erb :new_list, layout: :layout }
 
 # Create a new list
-post '/lists' do
-  list_name = params['list_name'].strip
-  error = invalid_list_name_message(list_name)
+post '/lists/create' do
+  @name = params['list_name'].strip
+  error = invalid_list_name_message(@name)
 
   if error
     session[:error] = error
-    erb :new_list, layout: :layout
-  else
-    list_id = next_id(@lists)
-    session[:lists][list_id] = { name: list_name, todos: {} }
-    session[:success] = "#{list_name} list created!"
-    redirect('/lists')
+    slice_string!(@name) if @name.size > 100
+    halt erb(:new_list, layout: :layout)
   end
+
+  @storage.create_new_list(@name)
+
+  session[:success] = "#{@name} list created!"
+  redirect('/lists')
 end
 
-get '/lists/:id' do |id|
-
-  @list_id = id.to_i
-  @list = load_list(id)
+get '/lists/:id' do
+  @list = load_list(@list_id)
   erb :list, layout: :layout
 end
 
-post '/lists/:id' do |id|
-  @list_id = id.to_i
-  @list = load_list(id)
-
-  @updated_name = params[:list_name].strip
+post '/lists/:id/update' do
+  @updated_name = params[:updated_name].strip
   error = invalid_list_name_message(@updated_name)
 
   if error
+    @list_name = params[:old_name]
     session[:error] = error
-    @updated_name.sub!(@updated_name[100..-1], '...') if @updated_name.size > 0
-    erb :edit_list, layout: :layout
-  else
-    @list[:name] = @updated_name
-    session[:success] = "List name has been updated!"
-
-    redirect("/lists/#{id}")
+    slice_string!(@updated_name) if @updated_name.size > 100
+    halt erb(:edit_list, layout: :layout)
   end
+
+  @storage.update_list_name(@list_id, @updated_name)
+  session[:success] = "List name has been updated!"
+  redirect("/lists/#{@list_id}")
 end
 
-get '/lists/:id/edit' do |id|
-  @list_id = id.to_i
-  @list = load_list(id)
+get '/lists/:id/edit' do
+  @list_name = @storage.list_name(@list_id)
   erb :edit_list, layout: :layout
 end
 
-post '/lists/:id/delete' do |id|
-  list_name = load_list(id)[:name]
-
-  @lists.delete(id.to_i)
+post '/lists/:id/delete' do
+  name = @storage.delete_list(@list_id)
   
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     "/lists"
   else
-    session[:success] = "#{list_name} list has been deleted!"
+    session[:success] = "#{name} list has been deleted!"
     redirect "/lists"
   end
 end
 
-post '/lists/:id/todos' do |id|
+post '/lists/:id/todos' do
   todo = params[:todo].strip
   error = invalid_todo_name(todo)
-  @list = @lists[id.to_i]
-  todos = @list[:todos]
 
   if error
     session[:error] = error
   else
-    todo_id = next_id(todos)
-    todos[todo_id] = { name: todo, completed: false }
+    @storage.add_todo_to_a_list(@list_id, todo)
     session[:success] = "#{todo} has been added to the list!"
   end
 
-  redirect("/lists/#{id}")
+  redirect("/lists/#{@list_id}")
 end
 
-post '/lists/:id/todos/:todo_id' do |id, todo_id|
-  is_completed = params[:completed] == 'true'
-  @list_id = id.to_i
-  @todo_id = todo_id.to_i
+post '/lists/:id/todos/:todo_id/update' do
+  status = params[:completed] == 'true'
+  @storage.update_todo_status(@list_id, @todo_id, status)
 
-  @list = load_list(id)
-  @list[:todos][@todo_id][:completed] = is_completed
-
-  session[:success] = "#{@list[:name]} list has been updated"
-  redirect("/lists/#{id}")
+  session[:success] = "#{params[:list_name]} list has been updated"
+  redirect("/lists/#{@list_id}")
 end
 
-post '/lists/:id/todos/:todo_id/delete' do |id, todo_id|
-  @list_id = id.to_i
-  @todo_id = todo_id.to_i
-
-  @list = load_list(id)
-  todo = @list[:todos].delete(@todo_id)
+post '/lists/:id/todos/:todo_id/delete' do
+  todo = @storage.delete_todo_from_list(@list_id, @todo_id)
 
   if env["HTTP_X_REQUESTED_WITH"] == "XMLHttpRequest"
     status 204
   else
-    session[:success] = "#{todo[:name]} has been deleted from this list"
+    session[:success] = "#{params[:todo_name]} has been deleted from this list"
     redirect "/lists/#{@list_id}"
   end
 end
 
-post '/lists/:id/completed' do |id|
-  @list_id = id.to_i
-  @list = load_list(id)
-  # binding.pry
-  todos = @list[:todos].values
+post '/lists/:id/completed' do
+  @storage.mark_list_complete(@list_id)
 
-  complete_all = todos.any? { |todo| !todo[:completed] }
-  todos.each { |todo| todo[:completed] = complete_all }
-
-  session[:success] = "#{@list[:name]} list has been updated"
-  redirect("/lists/#{id}")
+  session[:success] = "#{params[:list_name]} list has been updated"
+  redirect("/lists/#{@list_id}")
 end

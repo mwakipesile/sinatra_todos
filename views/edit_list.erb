@@ -1,6 +1,6 @@
 <section id='todos'>
   <header>
-    <h2 class='edit'>Editing '<%= @list[:name] %>'</h2>
+    <h2 class='edit'>Editing '<%= @list_name %>'</h2>
     <ul>
       <li>
         <form class='delete' action='/lists/<%= @list_id %>/delete' method='post'>
@@ -11,13 +11,14 @@
   </header>
 </section>
 
-<form action='/lists/<%= @list_id %>' method='post'>
+<form action='/lists/<%= @list_id %>/update' method='post'>
   <dl>
     <dt>
       <label for='list_name'>Update the name for your list:</label>
     </dt>
     <dd>
-      <input name='list_name' type='text' value='<%= @updated_name || @list[:name] %>'>
+      <input name='old_name' type='hidden' value='<%= @list_name %>'>
+      <input name='updated_name' type='text' value='<%= @updated_name || @list_name %>'>
     </dd>
   </dl>
   <fieldset class='actions'>

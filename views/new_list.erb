@@ -1,10 +1,10 @@
-<form action='/lists' method='post'>
+<form action='/lists/create' method='post'>
   <dl>
     <dt>
       <label for='list_name'>Enter the name for your new list:</label>
     </dt>
     <dd>
-      <input name='list_name' placeholder='List Name' type='text' value=''>
+      <input name='list_name' placeholder='List Name' type='text' value='<%= @name %>'>
     </dd>
   </dl>
   <fieldset class='actions'>
