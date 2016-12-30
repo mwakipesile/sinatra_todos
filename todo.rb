@@ -1,9 +1,14 @@
 require 'pry'
 require 'sinatra'
-require 'sinatra/reloader' if development?
 require 'sinatra/content_for'
 require 'tilt/erubis'
 require_relative 'models/database_persistence'
+
+configure(:development) do
+  require 'sinatra/reloader'
+  also_reload './models/database_persistence.rb'
+end
+
 
 configure do
   enable :sessions
@@ -34,7 +39,6 @@ helpers do
     id.to_i.to_s == id
   end
 
-
   def invalid_list_name_message(name)
     if !(1..100).cover?(name.size)
       return 'Name must be between 1 and 100 characters'
@@ -54,50 +58,31 @@ helpers do
     end
   end
 
-  def list_completed?(todos) 
-    !todos.empty? && todos.values.all? { |todo| todo[:completed] }
+  def list_completed?(list)
+    list[:todos_count] > 0 && list[:remaining_todos_count].zero?
   end
 
   def list_class(list)
-    todos = list[:todos]
-    return 'new' if todos.size.zero?
-    list_completed?(todos) ? 'complete' : '' 
+    return 'new' if list[:todos_count].zero?
+    list_completed?(list) ? 'complete' : ''
   end
 
   def todo_class(todo)
     todo[:completed] ? 'complete' : ''
   end
 
-  def todos_count(list)
-    list[:todos].size
-  end
-
-  def remaining_todos_count(list)
-    list[:todos].values.count { |todo| !todo[:completed] } 
-  end
-
   # Sort lists: uses implicitly passed in block & partition method
   def sort(lists)
-    completed, incomplete = lists.keys.partition { |id| list_completed?(lists[id][:todos])}
-    incomplete.each { |id| yield id, lists[id] }
-    completed.each { |id| yield id, lists[id] }
+    completed, incomplete = lists.partition { |list| list_completed?(list)}
+    incomplete.each { |list| yield list }
+    completed.each { |list| yield list }
   end
 
   # Sort todos: uses explicitly passed in block
   def sort_todos(todos, &block)
-    completed_todos = {}
-    incomplete_todos = {}
-
-    todos.each do |id, todo|
-      if todo[:completed]
-        completed_todos[id] = todo
-      else
-        incomplete_todos [id] = todo
-      end
-    end
-
-    incomplete_todos.each(&block)
-    completed_todos.each(&block)
+    completed, incomplete = todos.partition { |todo| todo[:completed] }
+    incomplete.each(&block)
+    completed.each(&block)
   end
 end
 
@@ -131,6 +116,7 @@ end
 
 get '/lists/:id' do
   @list = load_list(@list_id)
+  @todos = @storage.fetch_todos(@list_id)
   erb :list, layout: :layout
 end
 

@@ -8,20 +8,33 @@ class DatabasePersistence
     @logger = logger
   end
 
-  def fetch_list(id)
-    name = list_name(id)
-    return unless name
+  def fetch_list(list_id)
+    query = <<-Q
+      SELECT l.name,
+       COUNT(t.id) AS todos_count,
+       COUNT(NULLIF(t.completed, true)) AS remaining_todos_count
+      FROM lists AS l LEFT JOIN todos AS t ON l.id = t.list_id
+      WHERE l.id = $1
+      GROUP BY l.id;
+      Q
 
-    { name: name, todos: fetch_todos(id) }
+    tuples = exec_todos(query, list_id)
+    tuples.map do |tuple|
+      { 
+        name: tuple['name'],
+        todos_count: tuple['todos_count'].to_i,
+        remaining_todos_count: tuple['remaining_todos_count'].to_i
+      }
+    end.first
   end
 
   def fetch_todos(list_id)
     query = 'SELECT id, name, completed FROM todos WHERE list_id = $1'
     tuples = exec_todos(query, list_id)
 
-    tuples.each_with_object({}) do |tuple, todos|
-      status = tuple['completed'] == 't'
-      todos[tuple['id'].to_i] = { name: tuple['name'], completed: status }
+    tuples.map do |todo|
+      status = todo['completed'] == 't'
+      { id: todo['id'].to_i, name: todo['name'], completed: status }
     end
   end
     
@@ -34,24 +47,21 @@ class DatabasePersistence
 
   def all_lists
     query = <<-Q
-      SELECT l.id, l.name, t.id AS todo_id, t.completed
-      FROM lists AS l LEFT JOIN todos AS t ON l.id = t.list_id;
+      SELECT l.id, l.name,
+       COUNT(t.id) AS todos_count,
+       COUNT(NULLIF(t.completed, true)) AS remaining_todos_count
+      FROM lists AS l LEFT JOIN todos AS t ON l.id = t.list_id
+      GROUP BY l.id;
       Q
    
     tuples = exec_todos(query)
-
-    tuples.each_with_object({}) do |tuple, lists|
-      id = tuple['id'].to_i
-      name = tuple['name']
-      todo_id = tuple['todo_id']
-      status = tuple['completed'] == 't'
-
-      if lists[id]
-        lists[id][:todos][todo_id] = {completed: status}
-      else
-        lists[id] = { name: name, todos: {}}
-        lists[id][:todos][todo_id.to_i] = {completed: status} if todo_id
-      end
+    tuples.map do |tuple|
+      { 
+        id: tuple['id'].to_i,
+        name: tuple['name'],
+        todos_count: tuple['todos_count'].to_i,
+        remaining_todos_count: tuple['remaining_todos_count'].to_i
+      }
     end
   end 
 
@@ -74,13 +84,12 @@ class DatabasePersistence
   end
 
   def update_todo_status(list_id, id, status)
-   # refactor: unused list_id
-   exec_todos('UPDATE todos SET completed = $1 WHERE id = $2;', status, id)
+   query = 'UPDATE todos SET completed = $1 WHERE id = $2 AND list_id = $3;'
+   exec_todos(query, status, id, list_id)
   end
 
   def delete_todo_from_list(list_id, id)
-   # refactor: unused list_id
-   exec_todos('DELETE FROM todos WHERE id = $1', id)
+   exec_todos('DELETE FROM todos WHERE id = $1 AND list_id = $2', id, list_id)
   end
 
   def mark_all_todos_complete(list_id)

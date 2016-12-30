@@ -1,10 +1,10 @@
 <ul id='lists'>
-  <% sort(@lists) do |id, list| %>
+  <% sort(@lists) do |list| %>
   <li class='<%= list_class(list) %>'>
-    <a href='/lists/<%= id %>'>
+    <a href='/lists/<%= list[:id] %>'>
       <%= list[:name] %>
       <p>
-        <%= remaining_todos_count(list) %>/<%= todos_count(list) %>
+        <%= list[:remaining_todos_count] %>/<%= list[:todos_count] %>
       </p>
     </a>
   </li>
