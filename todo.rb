@@ -2,11 +2,11 @@ require 'pry'
 require 'sinatra'
 require 'sinatra/content_for'
 require 'tilt/erubis'
-require_relative 'models/database_persistence'
+require_relative 'models/sequel_persistence'
 
 configure(:development) do
   require 'sinatra/reloader'
-  also_reload './models/database_persistence.rb'
+  also_reload './models/sequel_persistence.rb'
 end
 
 
@@ -17,7 +17,7 @@ configure do
 end
 
 before do
-  @storage = DatabasePersistence.new(logger)
+  @storage = SequelPersistence.new(logger)
   @flash_message_keys = [:error, :success]
 end
 
